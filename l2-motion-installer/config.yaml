@@ -1,5 +1,5 @@
 name: L2 Motion Integration Installer
-version: "1.0.2"
+version: "1.0.3"
 slug: l2_motion_installer
 description: Installs or updates the L2 Motion Bed custom integration.
 url: https://github.com/Franklin-C/l2-motion-home-assistant
