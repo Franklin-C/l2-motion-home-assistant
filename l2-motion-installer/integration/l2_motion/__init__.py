@@ -4,12 +4,18 @@ from __future__ import annotations
 
 import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_ADDRESS
+from homeassistant.const import CONF_ADDRESS, CONF_HOST, CONF_PORT, CONF_TOKEN
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers import config_validation as cv
 
-from .const import DOMAIN, PLATFORMS
-from .controller import L2MotionController
+from .const import (
+    CONF_CONNECTION_TYPE,
+    CONNECTION_BLUETOOTH,
+    CONNECTION_WINDOWS_BRIDGE,
+    DOMAIN,
+    PLATFORMS,
+)
+from .controller import L2MotionBridgeController, L2MotionController
 
 MOVE_SCHEMA = vol.Schema({
     vol.Optional("config_entry_id"): cv.string,
@@ -35,7 +41,9 @@ COMMAND_SCHEMA = vol.Schema({
 })
 
 
-def _controller(hass: HomeAssistant, entry_id: str | None) -> L2MotionController:
+def _controller(
+    hass: HomeAssistant, entry_id: str | None
+) -> L2MotionController | L2MotionBridgeController:
     controllers = hass.data[DOMAIN]
     if entry_id:
         return controllers[entry_id]
@@ -70,7 +78,17 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    hass.data[DOMAIN][entry.entry_id] = L2MotionController(hass, entry.data[CONF_ADDRESS])
+    connection_type = entry.data.get(CONF_CONNECTION_TYPE, CONNECTION_BLUETOOTH)
+    if connection_type == CONNECTION_WINDOWS_BRIDGE:
+        controller = L2MotionBridgeController(
+            hass,
+            entry.data[CONF_HOST],
+            entry.data[CONF_PORT],
+            entry.data[CONF_TOKEN],
+        )
+    else:
+        controller = L2MotionController(hass, entry.data[CONF_ADDRESS])
+    hass.data[DOMAIN][entry.entry_id] = controller
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 

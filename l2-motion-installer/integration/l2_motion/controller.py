@@ -1,25 +1,29 @@
-"""Bluetooth controller for an HHC D345 / L2 Motion bed."""
+"""Controllers for a local or Windows-bridged HHC D345 bed."""
 
 from __future__ import annotations
 
 import asyncio
 from contextlib import suppress
+from typing import Any
 
+import aiohttp
 from bleak import BleakClient
 from bleak_retry_connector import establish_connection
 from homeassistant.components.bluetooth import async_ble_device_from_address
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import COMMANDS, DEVICE_NAME, WRITE_UUID
 
 
 class L2MotionController:
-    """Serialize commands and reconnect through HA Bluetooth or a proxy."""
+    """Serialize commands through Home Assistant Bluetooth or a proxy."""
 
     def __init__(self, hass: HomeAssistant, address: str) -> None:
         self.hass = hass
         self.address = address
+        self.identifier = address
         self._lock = asyncio.Lock()
 
     async def _connect(self) -> BleakClient:
@@ -39,14 +43,17 @@ class L2MotionController:
                 max_attempts=3,
             )
         except Exception as err:
-            raise HomeAssistantError(f"Could not connect to the L2 Motion bed: {err}") from err
+            raise HomeAssistantError(
+                f"Could not connect to the L2 Motion bed: {err}"
+            ) from err
 
     @staticmethod
     async def _write(client: BleakClient, letter: str) -> None:
-        await client.write_gatt_char(WRITE_UUID, f"${letter}".encode(), response=False)
+        await client.write_gatt_char(
+            WRITE_UUID, f"${letter}".encode(), response=False
+        )
 
     async def single(self, command: str) -> None:
-        """Send a one-shot command such as Home or Memory."""
         letter = COMMANDS[command]
         async with self._lock:
             client = await self._connect()
@@ -57,7 +64,6 @@ class L2MotionController:
                     await client.disconnect()
 
     async def move(self, section: str, direction: str, duration: float) -> None:
-        """Repeat a motor command at the D345 app's 100 ms cadence."""
         command = f"{section}_{direction}"
         if command not in COMMANDS:
             raise HomeAssistantError(f"Unsupported movement: {command}")
@@ -71,7 +77,6 @@ class L2MotionController:
                     await asyncio.sleep(0.1)
                     await self._write(client, COMMANDS[command])
             finally:
-                # D345 has no motor-stop packet. Ceasing writes is the stop action.
                 with suppress(Exception):
                     await client.disconnect()
 
@@ -83,7 +88,6 @@ class L2MotionController:
         feet: float,
         extra: float,
     ) -> None:
-        """Home first, then reproduce a position using timed upward movement."""
         values = {
             "head": max(0.0, min(float(head), 30.0)),
             "feet": max(0.0, min(float(feet), 30.0)),
@@ -98,7 +102,6 @@ class L2MotionController:
                 with suppress(Exception):
                     await client.disconnect()
 
-            # Home is a one-shot full-travel command. Reconnect only after it finishes.
             await asyncio.sleep(home_wait)
             client = await self._connect()
             try:
@@ -114,3 +117,87 @@ class L2MotionController:
             finally:
                 with suppress(Exception):
                     await client.disconnect()
+
+
+class L2MotionBridgeController:
+    """Send verified bed operations to the authenticated Windows bridge."""
+
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        host: str,
+        port: int,
+        token: str,
+    ) -> None:
+        self.hass = hass
+        self.host = host
+        self.port = port
+        self.token = token
+        self.identifier = f"windows-bridge:{host}:{port}"
+        self.address = self.identifier
+        self._base_url = f"http://{host}:{port}"
+
+    async def _request(
+        self,
+        path: str,
+        data: dict[str, Any] | None = None,
+        *,
+        timeout: float = 30,
+    ) -> dict[str, Any]:
+        session = async_get_clientsession(self.hass)
+        headers = {"Authorization": f"Bearer {self.token}"}
+        try:
+            async with session.post(
+                f"{self._base_url}{path}",
+                json=data or {},
+                headers=headers,
+                timeout=aiohttp.ClientTimeout(total=timeout),
+            ) as response:
+                payload = await response.json(content_type=None)
+                if response.status >= 400 or not payload.get("ok"):
+                    raise HomeAssistantError(
+                        payload.get("error")
+                        or f"Bridge returned HTTP {response.status}"
+                    )
+                return payload
+        except HomeAssistantError:
+            raise
+        except (aiohttp.ClientError, asyncio.TimeoutError, ValueError) as err:
+            raise HomeAssistantError(
+                f"Could not reach the L2 Motion Windows bridge at "
+                f"{self.host}:{self.port}: {err}"
+            ) from err
+
+    async def single(self, command: str) -> None:
+        await self._request("/command", {"command": command})
+
+    async def move(self, section: str, direction: str, duration: float) -> None:
+        duration = max(0.1, min(float(duration), 30.0))
+        await self._request(
+            "/move",
+            {"section": section, "direction": direction, "duration": duration},
+            timeout=duration + 20,
+        )
+
+    async def run_profile(
+        self,
+        *,
+        home_wait: float,
+        head: float,
+        feet: float,
+        extra: float,
+    ) -> None:
+        await self._request(
+            "/profile",
+            {
+                "home_wait": home_wait,
+                "head": head,
+                "feet": feet,
+                "extra": extra,
+            },
+            timeout=float(home_wait)
+            + float(head)
+            + float(feet)
+            + float(extra)
+            + 30,
+        )

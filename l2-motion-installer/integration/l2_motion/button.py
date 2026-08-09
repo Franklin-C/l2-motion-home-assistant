@@ -6,13 +6,12 @@ from dataclasses import dataclass
 
 from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_ADDRESS
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DEVICE_NAME, DOMAIN
-from .controller import L2MotionController
+from .controller import L2MotionBridgeController, L2MotionController
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -44,7 +43,7 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    controller: L2MotionController = hass.data[DOMAIN][entry.entry_id]
+    controller: L2MotionController | L2MotionBridgeController = hass.data[DOMAIN][entry.entry_id]
     async_add_entities(L2MotionButton(controller, entry, description) for description in BUTTONS)
 
 
@@ -53,12 +52,17 @@ class L2MotionButton(ButtonEntity):
 
     _attr_has_entity_name = True
 
-    def __init__(self, controller: L2MotionController, entry: ConfigEntry, description: L2ButtonDescription) -> None:
+    def __init__(
+        self,
+        controller: L2MotionController | L2MotionBridgeController,
+        entry: ConfigEntry,
+        description: L2ButtonDescription,
+    ) -> None:
         self.controller = controller
         self.entity_description = description
-        self._attr_unique_id = f"{entry.data[CONF_ADDRESS]}_{description.key}"
+        self._attr_unique_id = f"{controller.identifier}_{description.key}"
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, entry.data[CONF_ADDRESS])},
+            identifiers={(DOMAIN, controller.identifier)},
             name="L2 Motion Bed",
             manufacturer="Leon's / HHC",
             model="D345",

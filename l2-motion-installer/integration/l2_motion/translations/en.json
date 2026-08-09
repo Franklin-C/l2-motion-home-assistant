@@ -3,8 +3,17 @@
   "config": {
     "step": {
       "user": {
-        "title": "Choose your L2 Motion bed",
-        "description": "The bed must be nearby and advertising over Bluetooth.",
+        "title": "Connect your L2 Motion bed",
+        "description": "For VirtualBox, choose Windows bridge and enter the Windows computer name/IP and token printed by windows_bridge/install.ps1.",
+        "data": {
+          "connection_type": "Connection method",
+          "host": "Windows bridge host or IP",
+          "port": "Windows bridge port",
+          "token": "Bridge token"
+        }
+      },
+      "bluetooth_select": {
+        "title": "Choose your detected L2 Motion bed",
         "data": { "address": "Detected bed" }
       },
       "bluetooth_confirm": {
@@ -17,6 +26,11 @@
       "not_found": "Home Assistant Bluetooth is available, but HHC0051745CDEF was not visible. Close the phone app, confirm the bed has power, and check Bluetooth range.",
       "bluetooth_unavailable": "Home Assistant has no configured Bluetooth adapter or active Bluetooth proxy.",
       "not_supported": "The discovered Bluetooth device was not the exact supported L2 Motion bed."
+    },
+    "error": {
+      "cannot_connect": "Could not authenticate with the Windows bridge. Check its host, port, token, and Windows Firewall.",
+      "required": "This field is required.",
+      "invalid_token": "The bridge token must be at least 24 characters long."
     }
   }
 }

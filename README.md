@@ -40,6 +40,18 @@ Close the L2 Motion phone app before setup. The app and Home Assistant cannot re
 
 If the integration says the bed was not found, Home Assistant does not have enough Bluetooth coverage near the bed. Add an ESPHome Bluetooth proxy near it.
 
+## VirtualBox: use the Windows Bluetooth bridge
+
+If Home Assistant runs in VirtualBox, the built-in Windows Bluetooth adapter may not pass through reliably. The included [`windows_bridge`](windows_bridge) keeps Bluetooth on Windows and provides an authenticated local API to this integration.
+
+1. Close the L2 Motion phone app.
+2. Open PowerShell in `windows_bridge` and run `./install.ps1`.
+3. Allow Private network access if Windows Firewall prompts.
+4. In Home Assistant, add **L2 Motion Bed** and choose **Windows bridge**.
+5. Enter the Windows computer name or LAN IP, port `8765`, and the generated token.
+
+The token is stored with user-only file permissions under `%LOCALAPPDATA%\L2MotionBridge`. The bridge runs as a limited scheduled task at Windows sign-in.
+
 ## Test a precise movement
 
 In **Developer tools → Actions**, choose `l2_motion.move`:
