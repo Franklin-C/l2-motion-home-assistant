@@ -1,0 +1,71 @@
+move:
+  name: Move bed section
+  description: Move one bed section for a precise number of seconds.
+  fields:
+    section:
+      name: Section
+      required: true
+      selector:
+        select:
+          options: [head, feet, extra]
+    direction:
+      name: Direction
+      required: true
+      selector:
+        select:
+          options: [up, down]
+    duration:
+      name: Duration
+      required: true
+      default: 0.5
+      selector:
+        number:
+          min: 0.1
+          max: 30
+          step: 0.1
+          unit_of_measurement: seconds
+
+run_profile:
+  name: Run saved position
+  description: Send Home/Flat, wait for the bed, then reproduce a position with timed upward movements.
+  fields:
+    home_wait:
+      name: Home wait
+      required: true
+      default: 18
+      selector:
+        number:
+          min: 8
+          max: 45
+          step: 1
+          unit_of_measurement: seconds
+    head:
+      name: Head time
+      required: true
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 30
+          step: 0.1
+          unit_of_measurement: seconds
+    feet:
+      name: Feet time
+      required: true
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 30
+          step: 0.1
+          unit_of_measurement: seconds
+    extra:
+      name: Extra time
+      required: true
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 30
+          step: 0.1
+          unit_of_measurement: seconds
