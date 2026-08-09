@@ -2,6 +2,21 @@
 
 Direct local Bluetooth control for the Leon's L2 Motion / HHC D345 adjustable bed.
 
+## Install on Home Assistant OS / Supervised
+
+[![Open your Home Assistant instance and add the L2 Motion app repository](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2FFranklin-C%2Fl2-motion-home-assistant)
+
+1. Tap the button above and open the link in your Home Assistant instance.
+2. Confirm **Add repository**.
+3. Open **Settings → Apps**, select **L2 Motion Integration Installer**, and install it.
+4. Start the installer once and check its log for `Installation complete`.
+5. Restart Home Assistant.
+6. Tap the setup button below.
+
+[![Open your Home Assistant instance and start setting up L2 Motion Bed](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=l2_motion)
+
+The installer app only copies `custom_components/l2_motion` into `/config` and then exits. It does not remain running. Container and Core installations should use the manual installation below.
+
 ## What it adds
 
 - Home / Flat (`$O`)
@@ -12,7 +27,7 @@ Direct local Bluetooth control for the Leon's L2 Motion / HHC D345 adjustable be
 - `l2_motion.run_profile` action that homes the bed before replaying a saved position
 - Compatibility with Home Assistant Bluetooth adapters and ESPHome Bluetooth proxies
 
-## Installation
+## Manual installation
 
 1. Extract this ZIP.
 2. Copy the `l2_motion` folder from `custom_components` into Home Assistant's `/config/custom_components/` folder.
