@@ -26,6 +26,14 @@ PROFILE_SCHEMA = vol.Schema({
     vol.Required("extra", default=0): vol.All(vol.Coerce(float), vol.Range(min=0, max=30)),
 })
 
+COMMAND_SCHEMA = vol.Schema({
+    vol.Optional("config_entry_id"): cv.string,
+    vol.Required("command"): vol.In([
+        "home", "memory_1", "memory_2", "light",
+        "head_massage", "foot_massage", "stop_massage",
+    ]),
+})
+
 
 def _controller(hass: HomeAssistant, entry_id: str | None) -> L2MotionController:
     controllers = hass.data[DOMAIN]
@@ -50,8 +58,14 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
             extra=call.data["extra"],
         )
 
+    async def command(call: ServiceCall) -> None:
+        await _controller(hass, call.data.get("config_entry_id")).single(
+            call.data["command"]
+        )
+
     hass.services.async_register(DOMAIN, "move", move, schema=MOVE_SCHEMA)
     hass.services.async_register(DOMAIN, "run_profile", run_profile, schema=PROFILE_SCHEMA)
+    hass.services.async_register(DOMAIN, "command", command, schema=COMMAND_SCHEMA)
     return True
 
 
