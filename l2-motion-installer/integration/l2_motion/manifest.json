@@ -1,0 +1,15 @@
+{
+  "domain": "l2_motion",
+  "name": "L2 Motion Bed",
+  "bluetooth": [
+    { "local_name": "HHC0051745CDEF" }
+  ],
+  "codeowners": ["@Franklin-C"],
+  "config_flow": true,
+  "documentation": "https://github.com/Franklin-C/l2-motion-home-assistant",
+  "issue_tracker": "https://github.com/Franklin-C/l2-motion-home-assistant/issues",
+  "integration_type": "device",
+  "iot_class": "local_push",
+  "requirements": ["bleak-retry-connector>=3.10.0"],
+  "version": "1.0.0"
+}
