@@ -6,11 +6,17 @@
         "title": "Choose your L2 Motion bed",
         "description": "The bed must be nearby and advertising over Bluetooth.",
         "data": { "address": "Detected bed" }
+      },
+      "bluetooth_confirm": {
+        "title": "Add {name}",
+        "description": "Home Assistant found the exact L2 Motion bed advertisement."
       }
     },
     "abort": {
       "already_configured": "This bed is already configured.",
-      "not_found": "The bed was not found. Close the L2 Motion phone app, confirm the bed has power, and check Bluetooth coverage."
+      "not_found": "Home Assistant Bluetooth is available, but HHC0051745CDEF was not visible. Close the phone app, confirm the bed has power, and check Bluetooth range.",
+      "bluetooth_unavailable": "Home Assistant has no configured Bluetooth adapter or active Bluetooth proxy.",
+      "not_supported": "The discovered Bluetooth device was not the exact supported L2 Motion bed."
     }
   }
 }
