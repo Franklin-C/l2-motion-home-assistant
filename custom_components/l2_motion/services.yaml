@@ -1,3 +1,21 @@
+command:
+  name: Send bed command
+  description: Send a safe one-shot command such as Home, Memory, light, or massage.
+  fields:
+    command:
+      name: Command
+      required: true
+      selector:
+        select:
+          options:
+            - home
+            - memory_1
+            - memory_2
+            - light
+            - head_massage
+            - foot_massage
+            - stop_massage
+
 move:
   name: Move bed section
   description: Move one bed section for a precise number of seconds.
