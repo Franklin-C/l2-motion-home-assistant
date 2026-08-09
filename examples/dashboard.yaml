@@ -1,0 +1,139 @@
+type: vertical-stack
+cards:
+  - type: markdown
+    content: |
+      # L2 Motion Bed
+      Tap for a short adjustment. Hold for a two-second adjustment.
+
+  - type: grid
+    columns: 3
+    square: false
+    cards:
+      - type: button
+        name: Memory 1
+        icon: mdi:numeric-1-box
+        tap_action:
+          action: perform-action
+          perform_action: l2_motion.command
+          data:
+            command: memory_1
+      - type: button
+        name: Home / Flat
+        icon: mdi:bed-flat
+        tap_action:
+          action: perform-action
+          perform_action: l2_motion.command
+          data:
+            command: home
+      - type: button
+        name: Memory 2
+        icon: mdi:numeric-2-box
+        tap_action:
+          action: perform-action
+          perform_action: l2_motion.command
+          data:
+            command: memory_2
+
+  - type: grid
+    columns: 2
+    square: false
+    cards:
+      - type: button
+        name: Head Up
+        icon: mdi:arrow-up-bold
+        tap_action:
+          action: perform-action
+          perform_action: l2_motion.move
+          data: {section: head, direction: up, duration: 0.5}
+        hold_action:
+          action: perform-action
+          perform_action: l2_motion.move
+          data: {section: head, direction: up, duration: 2}
+      - type: button
+        name: Head Down
+        icon: mdi:arrow-down-bold
+        tap_action:
+          action: perform-action
+          perform_action: l2_motion.move
+          data: {section: head, direction: down, duration: 0.5}
+        hold_action:
+          action: perform-action
+          perform_action: l2_motion.move
+          data: {section: head, direction: down, duration: 2}
+      - type: button
+        name: Feet Up
+        icon: mdi:arrow-up-bold
+        tap_action:
+          action: perform-action
+          perform_action: l2_motion.move
+          data: {section: feet, direction: up, duration: 0.5}
+        hold_action:
+          action: perform-action
+          perform_action: l2_motion.move
+          data: {section: feet, direction: up, duration: 2}
+      - type: button
+        name: Feet Down
+        icon: mdi:arrow-down-bold
+        tap_action:
+          action: perform-action
+          perform_action: l2_motion.move
+          data: {section: feet, direction: down, duration: 0.5}
+        hold_action:
+          action: perform-action
+          perform_action: l2_motion.move
+          data: {section: feet, direction: down, duration: 2}
+      - type: button
+        name: Extra Up
+        icon: mdi:arrow-up-bold
+        tap_action:
+          action: perform-action
+          perform_action: l2_motion.move
+          data: {section: extra, direction: up, duration: 0.5}
+        hold_action:
+          action: perform-action
+          perform_action: l2_motion.move
+          data: {section: extra, direction: up, duration: 2}
+      - type: button
+        name: Extra Down
+        icon: mdi:arrow-down-bold
+        tap_action:
+          action: perform-action
+          perform_action: l2_motion.move
+          data: {section: extra, direction: down, duration: 0.5}
+        hold_action:
+          action: perform-action
+          perform_action: l2_motion.move
+          data: {section: extra, direction: down, duration: 2}
+
+  - type: grid
+    columns: 2
+    square: false
+    cards:
+      - type: button
+        name: Under-bed Light
+        icon: mdi:lightbulb
+        tap_action:
+          action: perform-action
+          perform_action: l2_motion.command
+          data: {command: light}
+      - type: button
+        name: Stop Massage
+        icon: mdi:stop
+        tap_action:
+          action: perform-action
+          perform_action: l2_motion.command
+          data: {command: stop_massage}
+      - type: button
+        name: Head Massage
+        icon: mdi:vibrate
+        tap_action:
+          action: perform-action
+          perform_action: l2_motion.command
+          data: {command: head_massage}
+      - type: button
+        name: Foot Massage
+        icon: mdi:vibrate
+        tap_action:
+          action: perform-action
+          perform_action: l2_motion.command
+          data: {command: foot_massage}
