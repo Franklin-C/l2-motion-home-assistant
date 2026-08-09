@@ -1,0 +1,16 @@
+{
+  "title": "L2 Motion Bed",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Choose your L2 Motion bed",
+        "description": "The bed must be nearby and advertising over Bluetooth.",
+        "data": { "address": "Detected bed" }
+      }
+    },
+    "abort": {
+      "already_configured": "This bed is already configured.",
+      "not_found": "The bed was not found. Close the L2 Motion phone app, confirm the bed has power, and check Bluetooth coverage."
+    }
+  }
+}
