@@ -54,6 +54,10 @@ data:
 
 The D345 does not have a separate Stop command. Motion stops when Home Assistant stops sending the repeated command. Durations are therefore intentionally capped at 30 seconds.
 
+## Mobile dashboard
+
+Copy [`examples/dashboard.yaml`](examples/dashboard.yaml), then in a Home Assistant dashboard choose **Edit dashboard → Add card → Manual** and paste the YAML. Tap movement buttons for 0.5 seconds of movement or hold them for a two-second adjustment.
+
 ## Create a voice-controllable saved position
 
 First use the web controller to determine the Head, Feet, and Extra timing. Then create a Home Assistant script like this:
