@@ -74,14 +74,20 @@ class BedController:
         self._lock = asyncio.Lock()
         self.last_address: str | None = config.address
         self.last_rssi: int | None = None
+        self._client: BleakClient | None = None
+
+    def _disconnected(self, client: BleakClient) -> None:
+        if self._client is client:
+            self._client = None
 
     async def discover(self, timeout: float = 10.0):
         """Find the exact bed by configured address or verified local name."""
+        device = None
         if self.config.address:
             device = await BleakScanner.find_device_by_address(
-                self.config.address, timeout=timeout
+                self.config.address, timeout=min(timeout, 4.0)
             )
-        else:
+        if device is None:
             device = await BleakScanner.find_device_by_name(
                 self.config.device_name, timeout=timeout
             )
@@ -93,6 +99,13 @@ class BedController:
         return device
 
     async def scan_status(self) -> dict[str, Any]:
+        if self._client is not None and self._client.is_connected:
+            return {
+                "visible": True,
+                "connected": True,
+                "name": self.config.device_name,
+                "address": self.last_address,
+            }
         device = await self.discover()
         return {
             "visible": True,
@@ -100,26 +113,83 @@ class BedController:
             "address": device.address,
         }
 
-    @staticmethod
-    async def _write(client: BleakClient, letter: str) -> None:
-        await client.write_gatt_char(WRITE_UUID, f"${letter}".encode(), response=False)
+    async def _write(self, client: BleakClient, letter: str) -> None:
+        try:
+            await client.write_gatt_char(
+                WRITE_UUID, f"${letter}".encode(), response=False
+            )
+        except Exception:
+            if self._client is client:
+                self._client = None
+            with suppress(Exception):
+                await client.disconnect()
+            raise
+
+    async def _stop_motion(self, client: BleakClient) -> None:
+        for _ in range(5):
+            await self._write(client, "b")
+            await asyncio.sleep(0.02)
 
     async def _connected_client(self) -> BleakClient:
-        device = await self.discover()
-        client = BleakClient(device)
-        await client.connect()
-        return client
+        if self._client is not None and self._client.is_connected:
+            return self._client
+
+        self._client = None
+        errors: list[Exception] = []
+
+        # Windows can often reconnect to a previously paired/cached BLE address
+        # even when the controller is between advertisement bursts. Trying the
+        # cached address first makes dashboard buttons much less timing-sensitive.
+        if self.last_address:
+            client = BleakClient(
+                self.last_address,
+                timeout=6.0,
+                disconnected_callback=self._disconnected,
+            )
+            try:
+                await client.connect()
+                self._client = client
+                await asyncio.sleep(0.25)
+                return client
+            except Exception as err:
+                errors.append(err)
+                with suppress(Exception):
+                    await client.disconnect()
+
+        # Refresh the BLEDevice once when the Windows cache alone was not enough.
+        # Keep the total below Home Assistant's 30-second bridge request timeout.
+        try:
+            device = await self.discover(timeout=7.0)
+            client = BleakClient(
+                device,
+                timeout=10.0,
+                disconnected_callback=self._disconnected,
+            )
+            await client.connect()
+            self._client = client
+            await asyncio.sleep(0.25)
+            return client
+        except Exception as err:
+            errors.append(err)
+            LOGGER.debug("Bed connection attempts failed", exc_info=True)
+
+        raise RuntimeError(
+            f"{self.config.device_name} could not connect after cached-address and scan attempts"
+        ) from errors[-1]
+
+    async def close(self) -> None:
+        async with self._lock:
+            client, self._client = self._client, None
+            if client is not None:
+                with suppress(Exception):
+                    await client.disconnect()
 
     async def single(self, command: str) -> None:
         if command not in COMMANDS:
             raise ValueError(f"Unsupported command: {command}")
         async with self._lock:
             client = await self._connected_client()
-            try:
-                await self._write(client, COMMANDS[command])
-            finally:
-                with suppress(Exception):
-                    await client.disconnect()
+            await self._write(client, COMMANDS[command])
 
     async def move(self, section: str, direction: str, duration: float) -> None:
         command = f"{section}_{direction}"
@@ -132,11 +202,11 @@ class BedController:
                 loop = asyncio.get_running_loop()
                 stop_at = loop.time() + duration
                 while loop.time() < stop_at:
-                    await asyncio.sleep(0.1)
                     await self._write(client, COMMANDS[command])
+                    await asyncio.sleep(0.1)
             finally:
                 with suppress(Exception):
-                    await client.disconnect()
+                    await self._stop_motion(client)
 
     async def run_profile(
         self, *, home_wait: float, head: float, feet: float, extra: float
@@ -149,27 +219,24 @@ class BedController:
         home_wait = max(8.0, min(float(home_wait), 45.0))
         async with self._lock:
             client = await self._connected_client()
-            try:
-                await self._write(client, COMMANDS["home"])
-            finally:
-                with suppress(Exception):
-                    await client.disconnect()
+            await self._write(client, COMMANDS["home"])
 
             await asyncio.sleep(home_wait)
             client = await self._connected_client()
-            try:
-                loop = asyncio.get_running_loop()
-                for section, duration in values.items():
-                    if duration <= 0:
-                        continue
-                    stop_at = loop.time() + duration
+            loop = asyncio.get_running_loop()
+            for section, duration in values.items():
+                if duration <= 0:
+                    continue
+                client = await self._connected_client()
+                stop_at = loop.time() + duration
+                try:
                     while loop.time() < stop_at:
-                        await asyncio.sleep(0.1)
                         await self._write(client, COMMANDS[f"{section}_up"])
-                    await asyncio.sleep(0.25)
-            finally:
-                with suppress(Exception):
-                    await client.disconnect()
+                        await asyncio.sleep(0.1)
+                finally:
+                    with suppress(Exception):
+                        await self._stop_motion(client)
+                await asyncio.sleep(0.25)
 
 
 def _json_body(request: web.Request) -> dict[str, Any]:
@@ -254,6 +321,7 @@ def create_app(config: BridgeConfig) -> web.Application:
     app.router.add_post("/command", command)
     app.router.add_post("/move", move)
     app.router.add_post("/profile", profile)
+    app.on_cleanup.append(lambda _app: controller.close())
     return app
 
 

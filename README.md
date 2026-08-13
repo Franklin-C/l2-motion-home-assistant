@@ -64,7 +64,7 @@ data:
   duration: 1.0
 ```
 
-The D345 does not have a separate Stop command. Motion stops when Home Assistant stops sending the repeated command. Durations are therefore intentionally capped at 30 seconds.
+The official app sends `$b` five times when a movement button is released. This integration reproduces that stop sequence, and durations are intentionally capped at 30 seconds.
 
 ## Mobile dashboard
 
@@ -93,7 +93,7 @@ To expose the script to Google Home, expose the resulting script entity through 
 
 ## Home/Flat accuracy
 
-For this D345 profile, Home/Flat is a single `$O` write. It must not be held or repeated. Motor movement is different: `$K/$L/$M/$N/$P/$Q` is repeated every 100 ms and stops when transmission ends. This integration follows that behavior.
+For this D345 profile, Home/Flat is a single `$O` write. It must not be held or repeated. Motor movement is different: `$K/$L/$M/$N/$P/$Q` is sent immediately, repeated every 100 ms, then stopped with five `$b` writes. The Bluetooth connection remains open between dashboard commands, matching the working phone/web controller.
 
 ## Safety
 
