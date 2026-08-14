@@ -26,6 +26,7 @@ The installer app only copies `custom_components/l2_motion` into `/config` and t
 - `l2_motion.move` action for precise timed movement
 - `l2_motion.run_profile` action that homes the bed before replaying a saved position
 - Compatibility with Home Assistant Bluetooth adapters and ESPHome Bluetooth proxies
+- An always-connected BLE session that automatically reconnects through the proxy
 
 ## Manual installation
 
@@ -37,6 +38,8 @@ The installer app only copies `custom_components/l2_motion` into `/config` and t
 6. Search for **L2 Motion Bed** and select the detected bed.
 
 Close the L2 Motion phone app before setup. The app and Home Assistant cannot reliably control the same Bluetooth connection simultaneously.
+
+The integration reserves one Bluetooth connection slot while loaded. If the bed or proxy drops the link, Home Assistant retries every five seconds and reconnects automatically.
 
 If the integration says the bed was not found, Home Assistant does not have enough Bluetooth coverage near the bed. Add an ESPHome Bluetooth proxy near it.
 

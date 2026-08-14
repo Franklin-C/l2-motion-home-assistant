@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from contextlib import suppress
 from typing import Any
 
@@ -16,6 +17,10 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import COMMANDS, DEVICE_NAME, WRITE_UUID
 
+LOGGER = logging.getLogger(__name__)
+RECONNECT_DELAY = 5.0
+CONNECTED_CHECK_INTERVAL = 30.0
+
 
 class L2MotionController:
     """Serialize commands through Home Assistant Bluetooth or a proxy."""
@@ -26,11 +31,45 @@ class L2MotionController:
         self.identifier = address
         self._lock = asyncio.Lock()
         self._client: BleakClient | None = None
+        self._connection_task: asyncio.Task[None] | None = None
+        self._reconnect_event = asyncio.Event()
 
     def _disconnected(self, client: BleakClient) -> None:
         """Forget a connection that the bed or proxy closed."""
         if self._client is client:
             self._client = None
+            LOGGER.info("Bed Bluetooth connection dropped; reconnecting")
+        self.hass.loop.call_soon_threadsafe(self._reconnect_event.set)
+
+    async def _maintain_connection(self) -> None:
+        """Keep one proxy connection reserved for the bed."""
+        while True:
+            self._reconnect_event.clear()
+            try:
+                async with self._lock:
+                    await self._connect()
+            except asyncio.CancelledError:
+                raise
+            except Exception as err:
+                LOGGER.debug("Bed connection unavailable; retrying: %s", err)
+                await asyncio.sleep(RECONNECT_DELAY)
+                continue
+
+            try:
+                await asyncio.wait_for(
+                    self._reconnect_event.wait(),
+                    timeout=CONNECTED_CHECK_INTERVAL,
+                )
+            except TimeoutError:
+                pass
+
+    async def async_start(self) -> None:
+        """Start the lifetime connection monitor."""
+        if self._connection_task is None or self._connection_task.done():
+            self._connection_task = self.hass.async_create_background_task(
+                self._maintain_connection(),
+                "L2 Motion persistent Bluetooth connection",
+            )
 
     async def _connect(self) -> BleakClient:
         if self._client is not None and self._client.is_connected:
@@ -58,6 +97,7 @@ class L2MotionController:
             # characteristic is fully ready. The working web app naturally has
             # this pause between Connect and the first button press.
             await asyncio.sleep(0.25)
+            LOGGER.info("Persistent Bluetooth connection established to %s", self.address)
             return client
         except Exception as err:
             raise HomeAssistantError(
@@ -84,6 +124,11 @@ class L2MotionController:
 
     async def async_close(self) -> None:
         """Release the persistent GATT connection when the entry unloads."""
+        task, self._connection_task = self._connection_task, None
+        if task is not None:
+            task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
         async with self._lock:
             client, self._client = self._client, None
             if client is not None:

@@ -89,6 +89,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     else:
         controller = L2MotionController(hass, entry.data[CONF_ADDRESS])
     hass.data[DOMAIN][entry.entry_id] = controller
+    if isinstance(controller, L2MotionController):
+        await controller.async_start()
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
