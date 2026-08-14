@@ -18,7 +18,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from .const import COMMANDS, DEVICE_NAME, WRITE_UUID
 
 LOGGER = logging.getLogger(__name__)
-RECONNECT_DELAY = 5.0
+RECONNECT_DELAY = 15.0
 CONNECTED_CHECK_INTERVAL = 30.0
 
 
@@ -47,7 +47,7 @@ class L2MotionController:
             self._reconnect_event.clear()
             try:
                 async with self._lock:
-                    await self._connect()
+                    await self._connect(max_attempts=1)
             except asyncio.CancelledError:
                 raise
             except Exception as err:
@@ -71,7 +71,7 @@ class L2MotionController:
                 "L2 Motion persistent Bluetooth connection",
             )
 
-    async def _connect(self) -> BleakClient:
+    async def _connect(self, *, max_attempts: int = 3) -> BleakClient:
         if self._client is not None and self._client.is_connected:
             return self._client
 
@@ -90,7 +90,7 @@ class L2MotionController:
                 device,
                 DEVICE_NAME,
                 disconnected_callback=self._disconnected,
-                max_attempts=3,
+                max_attempts=max_attempts,
             )
             self._client = client
             # Android/ESPHome proxies can report connected before the write

@@ -39,7 +39,7 @@ The installer app only copies `custom_components/l2_motion` into `/config` and t
 
 Close the L2 Motion phone app before setup. The app and Home Assistant cannot reliably control the same Bluetooth connection simultaneously.
 
-The integration reserves one Bluetooth connection slot while loaded. If the bed or proxy drops the link, Home Assistant retries every five seconds and reconnects automatically.
+The integration reserves one Bluetooth connection slot while loaded. If the bed or proxy drops the link, Home Assistant makes one immediate connection attempt, then retries every 15 seconds so it does not overwhelm Android's GATT stack.
 
 If the integration says the bed was not found, Home Assistant does not have enough Bluetooth coverage near the bed. Add an ESPHome Bluetooth proxy near it.
 
